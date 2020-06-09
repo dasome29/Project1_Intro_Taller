@@ -7,6 +7,8 @@ from threading import Thread
 import functools
 import os
 
+import pdb
+
 global CB_EW, Freno, Proxi, cars, stopped, animation_time
 
 CB_EW = True
@@ -18,147 +20,144 @@ animation_time = 10
 
 root = tk.Tk()
 
+# def read_txt():
+#     global CB_EW, Freno, Proxi
+#     w = open('backup.txt', 'r')
+#     CB_EW = w.readline()
+#     Freno = w.readline()
+#     Proxi = w.readline()
+#
+# read_txt()
+
+listaY = [50, 260]
 
 
-def read_txt():
-    global CB_EW, Freno, Proxi
-    w = open('backup.txt', 'r')
-    CB_EW = w.readline()
-    Freno = w.readline()
-    Proxi = w.readline()
-
-read_txt()
+def cargar_img(name):
+    path = os.path.join('Images', name)
+    image = PhotoImage(file=path)
+    return image
 
 
+def change_lane(i, canvas, truck):
+    global cars
+
+    truck_position = canvas.coords(truck)
+    if i < len(cars):
+        car = cars[i]
+        car_position = car.canvas.coords(car.image)
+        print(len(car_position))
+        if car_position[0] < [truck_position[0] + 200 + (Proxi / 2)] and car_position[1] != truck_position[1]:
+            return False
+        else:
+            return change_lane(i + 1, canvas, truck)
+    else:
+        return True
+
+
+class Car:
+    def __init__(self, canvas, truck, main, id):
+        self.id = id
+        self.canvas = canvas
+        self.x = 900
+        self.y = random.choice(listaY)
+        self.speed = -random.randint(1, 3)
+        # self.rect = canvas.create_rectangle(self.x, self.y, self.x + 200, self.y + 100, width=2, fill='red')
+        self.distancia = Proxi
+        self.truck = truck
+        self.freno = Freno
+        self.out = False
+        self.CB_EW = CB_EW
+        self.frenado = False
+        self.main = main
+
+        self.image_cache = cargar_img("red_car.gif")
+        self.image = self.canvas.create_image(self.x, self.y, image=self.image_cache, anchor=NW, state=NORMAL,
+                                              tag="carrito")
+
+        self.canvas.coords("carrito")
+
+        car_thread = Thread(target=lambda: self.mover(self.image))
+        car_thread.daemon = True
+        car_thread.start()
+
+    def __del__(self):
+        print("Deleted car")
+
+    def delete_car(self, i):
+        global cars
+        print("Deleting car")
+        if i < len(cars):
+            print(self.id)
+            if cars[i].id == self.id:
+                print("True")
+                cars.remove(cars[i])
+                return
+            return self.delete_car(i + 1)
+        else:
+            return
+
+    def mover(self, image):
+        global stopped, cars
+        if not stopped and not self.out:
+            self.canvas.move(image, self.speed, 0)
+            self.canvas.after(25, lambda: self.mover(image))
+            # self.canvas.itemconfig("carrito", state=NORMAL)
+            self.position = self.canvas.coords(image)
+            truck_position = self.canvas.coords(self.truck)
+            if (self.position[0] + 200) >= 0:
+                if self.freno and self.CB_EW:
+                    if [self.position[0]] < [truck_position[0] + 200 + (Proxi / 2)] and self.position[1] == \
+                            truck_position[1]:
+                        self.speed = 0
+                        if not self.frenado:
+                            self.frenado = True
+                            stopped = True
+                            message = tk.messagebox.showinfo(title='Frenado',
+                                                             message='Se ejecuto el frenado de emergencia por proximidad')
+                            self.canvas.destroy()
+                            self.main.destroy()
+
+                if self.freno == False and self.CB_EW:
+                    if [self.position[0]] < [truck_position[0] + 200 + Proxi] and self.position[1] == truck_position[1]:
+                        self.speed = 0
+                        if change_lane(0, self.canvas, self.truck):
+                            print('siiiii')
+                            if not self.frenado:
+                                self.frenado = True
+                                if truck_position[1] == 260:
+                                    self.canvas.coords('destroyer_truck', 10, 50, 210, 150)
+                                else:
+                                    self.canvas.coords('destroyer_truck', 10, 260, 210, 360)
+                            message = tk.messagebox.showinfo(title='Frenado',
+                                                             message='Se ejecuto el frenado de emergencia por proximidad')
+                            self.canvas.destroy()
+                            self.main.destroy()
+                        else:
+                            print('noup')
+                            message = tk.messagebox.showinfo(title='Frenado',
+                                                             message='Se ejecuto el frenado de emergencia por proximidad')
+                            self.canvas.destroy()
+                            self.main.destroy()
+            else:
+                self.out = True
+                self.delete_car(0)
+                print(len(cars))
+                return
+        else:
+            return
 
 
 '''Simulador'''
 
 
 def simu():
-    listaY = [50, 260]
-
     global CB_EW, Proxi, Freno, cars, stopped
 
     print("El valor de CB_EW simu es:", CB_EW)
     print("El valor de Freno simu es:", Freno)
     print("El valor de Proxi simu es:", Proxi)
 
-    def change_lane(i, canvas, truck):
-        global cars
-
-        truck_position = canvas.coords(truck)
-        if i < len(cars):
-            car = cars[i]
-            car_position = car.canvas.coords(car.rect)
-            if [car_position[0]] < [truck_position[2] + 200 + (Proxi / 2)] and car_position[1] != truck_position[1]:
-                return False
-            else:
-                return change_lane(i + 1, canvas, truck)
-        else:
-            return True
-
-
-    def cargar_img(name):
-        path = os.path.join('Images', name)
-        image = PhotoImage(file=path)
-        return image
-
-        
-    #Funcion para borrar de la existencia a los carritos, deme un chance a mañana y la hago jajaja
-    def delete_car():
-        return
-
-    class Car:
-        def __init__(self, canvas, truck, main):
-            self.canvas = canvas
-            self.x = 900
-            self.y = random.choice(listaY)
-            self.speed = -random.randint(1, 3)
-            #self.rect = canvas.create_rectangle(self.x, self.y, self.x + 200, self.y + 100, width=2, fill='red')
-            self.distancia = Proxi
-            self.truck = truck
-            self.freno = Freno
-            self.CB_EW = CB_EW
-            self.frenado = False
-            self.main = main
-            
-            littlecar = cargar_img("red_car.gif")
-            self.canvas.create_image(self.x, self.y, image=littlecar, anchor=NW, state=NORMAL, tag="carrito")
-            self.canvas.coords("carrito")
-        
-            car_thread = Thread(target=self.mover)
-            car_thread.daemon = True
-            car_thread.start()
-
-
-            
-
-        
-
-        def __del__(self):
-            print("Deleted car")
-
-        def mover(self):
-            global stopped, cars
-            if not stopped:
-                self.canvas.move(self.rect, self.speed, 0)
-                self.canvas.after(25, self.mover)
-                self.position = self.canvas.coords(self.rect)
-                truck_position = self.canvas.coords(self.truck)
-                if (self.position[0]+200) >= 0:
-                    if self.freno and self.CB_EW:
-
-                        if [self.position[0]] < [truck_position[0]+200 + (Proxi / 2)] and self.position[1] == \
-                                truck_position[1]:
-
-                            self.speed = 0
-
-                            if not self.frenado:
-                                self.frenado = True
-                                print(self.frenado)
-                                message = tk.messagebox.showinfo(title='Frenado',
-                                                                 message='Se ejecuto el frenado de emergencia por proximidad')
-                                self.canvas.destroy()
-                                self.main.destroy()
-                                
-
-                    if self.freno == False and self.CB_EW:
-                        if [self.position[0]] < [truck_position[0] + 200 + Proxi] and self.position[1] == \
-                                truck_position[1]:
-                            self.speed = 0
-                            if change_lane(0, self.canvas, self.truck):
-                                print('siiiii')
-                                if not self.frenado:
-                                    self.frenado = True
-                                    print(self.frenado)
-                                if truck_position[1]== 260:
-                                    self.canvas.coords('destroyer_truck', 10, 50, 210, 150)
-                                else:
-                                    self.canvas.coords('destroyer_truck', 10, 260, 210, 360)
-                                message = tk.messagebox.showinfo(title='Frenado',
-                                                                 message='Se ejecuto el frenado de emergencia por proximidad')
-                                self.canvas.destroy()
-                                self.main.destroy()
-                                
-
-                                    
-                            else:
-                                print('noup')
-                                message = tk.messagebox.showinfo(title='Frenado',
-                                                                 message='Se ejecuto el frenado de emergencia por proximidad')
-                                self.canvas.destroy()
-                                self.main.destroy()
-                                
-
-                            stopped = True
-                else:
-                    # cars.remove(self)
-                    # del self
-                    # print(len(cars))
-                    return
-            else:
-                return
+    # Funcion para borrar de la existencia a los carritos, deme un chance a mañana y la hago jajaja
 
     def main():
         global cars, stopped
@@ -169,17 +168,15 @@ def simu():
         root_main.resizable(False, False)
 
         highway_canvas = Canvas(root_main, width=1200, height=400, bg='gray')
+        highway_canvas.pack(expand=1, fill=BOTH)
         highway_canvas.place(x=0, y=0)
 
         truck = cargar_img("blue_truck.gif")
         highway_canvas.create_image(10, 260, image=truck, anchor=NW, state=NORMAL, tag="super_truck")
-        highway_canvas.coords("super_truck")
-        
-        #truck_rect = highway_canvas.create_rectangle(10, 260, 210, 360, width=2, fill='blue',
-                                                     #tag='destroyer_truck')
-        truckPosicion = highway_canvas.coords('super_truck')
 
-        
+        # truck_rect = highway_canvas.create_rectangle(10, 260, 210, 360, width=2, fill='blue',
+        # tag='destroyer_truck')
+        truckPosicion = highway_canvas.coords('super_truck')
 
         '''Como crear una imagen jiji, tqm
         littlecar = cargar_img("Car.gif")
@@ -187,7 +184,7 @@ def simu():
         highway_canvas.coords("carrito")
         print(highway_canvas.coords("carrito"))
         '''
-        
+
         def back():
             highway_canvas.destroy()
             root_main.destroy()
@@ -199,19 +196,6 @@ def simu():
             else:
                 highway_canvas.coords('destroyer_truck', 10, 260, 210, 360)
 
-        def create_car():
-            global cars, stopped
-            if not stopped:
-                cars.append(Car(highway_canvas, 'super_truck', root_main))
-
-                time.sleep(10)
-                create_car()
-            else:
-                return
-
-        red_car_thread = Thread(target=create_car)
-        red_car_thread.start()
-
         button_up = tk.Button(highway_canvas, text='Up', font=("fixedsys", "10"),
                               bg="#82B3FF", command=lambda: move_car("UP"))
         button_up.place(x=100, y=0)
@@ -220,12 +204,27 @@ def simu():
                                 command=lambda: move_car("DOWN"))
         button_down.place(x=200, y=0)
 
-        button = tk.Button(highway_canvas, text='Press', font=("fixedsys", "10"),
-                           bg="#82B3FF", command=create_car)
-        button.place(x=0, y=0)
+        # button = tk.Button(highway_canvas, text='Press', font=("fixedsys", "10"),
+        #                    bg="#82B3FF", command=create_car)
+        # button.place(x=0, y=0)
 
         Btn_back = Button(highway_canvas, text='BACK', command=back, fg='black', bg='white')
         Btn_back.place(x=250, y=1)
+
+        def create_car(canvas, id):
+            global cars, stopped
+            if not stopped:
+                car = Car(canvas, 'super_truck', root_main, id)
+                cars.append(car)
+
+                time.sleep(10)
+                create_car(canvas, id + 1)
+            else:
+                return
+
+        # Car(highway_canvas, 'super_truck', root_main)
+        red_car_thread = Thread(target=create_car, args=[highway_canvas, 0])
+        red_car_thread.start()
 
         root_main.mainloop()
 
@@ -238,15 +237,15 @@ def simu():
 def config():
     global CB_EW, Freno, Proxi
 
-    def change_txt():
-        w = open('backup.txt','w')
-        w.write(CB_EW)
-        w.write('\n')
-        w.write(Freno)
-        w.write('\n')
-        w.write(Proxi)
-        w.close() #Cierras el archivo.
-    change_txt()
+    # def change_txt():
+    #     w = open('backup.txt','w')
+    #     w.write(CB_EW)
+    #     w.write('\n')
+    #     w.write(Freno)
+    #     w.write('\n')
+    #     w.write(Proxi)
+    #     w.close() #Cierras el archivo.
+    # change_txt()
 
     def cambiar():
         global CB_EW, Freno, Proxi
@@ -338,12 +337,12 @@ def config():
 def anim():
     # root.withdraw()
     global animation_time
-    
+
     print(animation_time)
 
     animation_time = int(entry_time.get())
     print(animation_time)
-    #animation_time = 10
+    # animation_time = 10
     balls = []
     animation_active = True
 
@@ -415,12 +414,11 @@ def anim():
     label3 = tk.Label(anim_canvas, text="Carnet: 2020129621", font=("Haettenschweiler", 15),
                       fg="#606060")
 
-    
     label1.place(x=150, y=2)
     label2.place(x=20, y=70)
     label3.place(x=20, y=150)
 
-    button = tk.Button(anim_canvas, text="Continuar", font=("fixedsys", "15"), bg='gray', fg = '#F5B7B1', 
+    button = tk.Button(anim_canvas, text="Continuar", font=("fixedsys", "15"), bg='gray', fg='#F5B7B1',
                        command=lambda: [anim_canvas.destroy(), root_anim.destroy(), root.deiconify()])
     button.place(x=650, y=350)
 
@@ -451,7 +449,6 @@ label_time.place(x=120, y=180)
 
 entry_time = tk.Entry(root, textvariable=animation_time)
 entry_time.place(x=140, y=210)
-      
 
 button_anim = tk.Button(root_canvas, text='Inicio', font=('fixedsys', 14), bg='#D5DBDB', fg='#34495E',
                         command=lambda: [root.withdraw(), anim()])
