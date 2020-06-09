@@ -20,14 +20,13 @@ animation_time = 10
 
 root = tk.Tk()
 
-# def read_txt():
-#     global CB_EW, Freno, Proxi
-#     w = open('backup.txt', 'r')
-#     CB_EW = w.readline()
-#     Freno = w.readline()
-#     Proxi = w.readline()
-#
-# read_txt()
+def read_txt():
+    global CB_EW, Freno, Proxi
+    w = open('backup.txt', 'r')
+    CB_EW = w.readline()
+    Freno = w.readline()
+    Proxi = w.readline()
+read_txt()
 
 listaY = [50, 260]
 
@@ -46,7 +45,7 @@ def change_lane(i, canvas, truck):
         car = cars[i]
         car_position = car.canvas.coords(car.image)
         print(len(car_position))
-        if car_position[0] < [truck_position[0] + 200 + (Proxi / 2)] and car_position[1] != truck_position[1]:
+        if car_position[0] < (truck_position[0] + 200 + (Proxi * 2)) and car_position[1] != truck_position[1]:
             return False
         else:
             return change_lane(i + 1, canvas, truck)
@@ -125,19 +124,34 @@ class Car:
                             if not self.frenado:
                                 self.frenado = True
                                 if truck_position[1] == 260:
-                                    self.canvas.coords('destroyer_truck', 10, 50, 210, 150)
+                                    self.canvas.coords('super_truck', 10, 50)
                                 else:
-                                    self.canvas.coords('destroyer_truck', 10, 260, 210, 360)
-                            message = tk.messagebox.showinfo(title='Frenado',
-                                                             message='Se ejecuto el frenado de emergencia por proximidad')
-                            self.canvas.destroy()
-                            self.main.destroy()
+                                    self.canvas.coords('super_truck', 10, 260)
+                                stopped = True
+                                message = tk.messagebox.showinfo(title='Frenado',
+                                                                message='Se realizo el cambio de carril')
+                                self.canvas.destroy()
+                                self.main.destroy()
                         else:
                             print('noup')
+                            stopped = True
                             message = tk.messagebox.showinfo(title='Frenado',
-                                                             message='Se ejecuto el frenado de emergencia por proximidad')
+                                                             message='No se puede realizar el cambio de carril')
                             self.canvas.destroy()
                             self.main.destroy()
+                if self.CB_EW == False:
+                    if [self.position[0]] < [truck_position[0] + 200] and self.position[1] == \
+                            truck_position[1]:
+                        self.speed = 0
+                        if not self.frenado:
+                            self.frenado = True
+                            stopped = True
+                            message = tk.messagebox.showinfo(title='Frenado',
+                                                             message='Se ha producido un accidente')
+                            self.canvas.destroy()
+                            self.main.destroy()
+
+
             else:
                 self.out = True
                 self.delete_car(0)
@@ -192,9 +206,9 @@ def simu():
 
         def move_car(s):
             if s == "UP":
-                highway_canvas.coords('destroyer_truck', 10, 50, 210, 150)
+                highway_canvas.coords('super_truck', 10, 50)
             else:
-                highway_canvas.coords('destroyer_truck', 10, 260, 210, 360)
+                highway_canvas.coords('super_truck', 10, 260)
 
         button_up = tk.Button(highway_canvas, text='Up', font=("fixedsys", "10"),
                               bg="#82B3FF", command=lambda: move_car("UP"))
@@ -237,15 +251,9 @@ def simu():
 def config():
     global CB_EW, Freno, Proxi
 
-    # def change_txt():
-    #     w = open('backup.txt','w')
-    #     w.write(CB_EW)
-    #     w.write('\n')
-    #     w.write(Freno)
-    #     w.write('\n')
-    #     w.write(Proxi)
-    #     w.close() #Cierras el archivo.
-    # change_txt()
+
+
+
 
     def cambiar():
         global CB_EW, Freno, Proxi
@@ -256,6 +264,13 @@ def config():
         print("El valor de CB_EW cambio es:", CB_EW)
         print("El valor de Freno cambio es:", Freno)
         print("El valor de Proxi cambio es:", Proxi)
+
+        def change_txt():
+            print('holi', CB_EW)
+            w = open('backup.txt', 'w')
+            w.writelines(str(CB_EW) + '\n' + str(Freno) + '\n' + str(Proxi))
+            w.close()  # Cierras el archivo.
+        change_txt()
 
         simu()
 
@@ -274,9 +289,9 @@ def config():
     config_canvas = tk.Canvas(root_config, width=800, height=400, bg='gray')
     config_canvas.place(x=0, y=0)
 
-    label1 = tk.Label(config_canvas, text="Parametro de proximidad", font=("fixedsys", 5),
+    label1 = tk.Label(config_canvas, text="Parametro de proximidad (cm)", font=("fixedsys", 5),
                       bg='#606060', fg='#AED6F1')
-    label1.place(x=75, y=99)
+    label1.place(x=35, y=99)
 
     label2 = tk.Label(config_canvas, text="Uso del CB-EW", font=("fixedsys", 5),
                       bg='#606060', fg='#AED6F1')
