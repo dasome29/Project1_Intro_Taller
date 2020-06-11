@@ -1,14 +1,12 @@
-from tkinter import *
+from tkinter import *             #Importar todo de la libreria de Tkinter para realizar la GUI
 import tkinter as tk
-from tkinter import messagebox
-import random
-import time
-from threading import Thread
-import functools
-import os
+from tkinter import messagebox    #Importar especificamente el Messagebox para realizar los mensajes al usuario
+import random                     #Importar Random para la aparicion de los autos y la velocidad
+import time                       #Importar Time para el Splash
+from threading import Thread      #Importar threading para el uso de hilos
+import os                         #Importar os para el uso de imagenes
 
-import pdb
-
+#Variables globales
 global CB_EW, Freno, Proxi, cars, stopped, animation_time
 
 CB_EW = True
@@ -18,8 +16,12 @@ cars = []
 stopped = False
 animation_time = 10
 
+
+#Inicio de la ventana principal
 root = tk.Tk()
 
+
+#Funcion para leer los datos almacenados en el txt
 def read_txt():
     global CB_EW, Freno, Proxi
     w = open('backup.txt', 'r')
@@ -28,15 +30,22 @@ def read_txt():
     Proxi = w.readline()
 read_txt()
 
+#Lista de las posiciones en Y
 listaY = [50, 260]
 
 
+#Funcion para cargar imagenes
+#E: nombre del archivo a cargar
+#S: variable con la imagen cargada
 def cargar_img(name):
     path = os.path.join('Images', name)
     image = PhotoImage(file=path)
     return image
 
 
+#Funcion para verificar si es posible realizar el cambio de carril
+#E: Indice para la lista de carros,  el canvas donde se esta realizando la simulacion, el objeto truck
+#S: Boolean se es posible el cambio de carril
 def change_lane(i, canvas, truck):
     global cars
 
@@ -53,14 +62,17 @@ def change_lane(i, canvas, truck):
         return True
 
 
+#Clase para la creacion de los automoviles
 class Car:
+
+    #Funcion para crear el objeto
+    #E: el canvas donde se realiza la animacion, el objeto truck, la ventana donde se encuentra el canvas y el identificador del automovil
     def __init__(self, canvas, truck, main, id):
         self.id = id
         self.canvas = canvas
         self.x = 900
         self.y = random.choice(listaY)
         self.speed = -random.randint(1, 3)
-        # self.rect = canvas.create_rectangle(self.x, self.y, self.x + 200, self.y + 100, width=2, fill='red')
         self.distancia = Proxi
         self.truck = truck
         self.freno = Freno
@@ -79,9 +91,11 @@ class Car:
         car_thread.daemon = True
         car_thread.start()
 
+    #Funcion para mostrar en shell cuando se elimina un automovil de la lista
     def __del__(self):
         print("Deleted car")
 
+    #Funcion para eliminar los automoviles de la lista que los almacena
     def delete_car(self, i):
         global cars
         print("Deleting car")
@@ -95,15 +109,17 @@ class Car:
         else:
             return
 
+    #Funcion para realizar el movimiento de los automoviles y para verificar cuando se realiza la proximacion
     def mover(self, image):
         global stopped, cars
         if not stopped and not self.out:
             self.canvas.move(image, self.speed, 0)
             self.canvas.after(25, lambda: self.mover(image))
-            # self.canvas.itemconfig("carrito", state=NORMAL)
             self.position = self.canvas.coords(image)
             truck_position = self.canvas.coords(self.truck)
+
             if (self.position[0] + 200) >= 0:
+
                 if self.freno and self.CB_EW:
                     if [self.position[0]] < [truck_position[0] + 200 + (Proxi / 2)] and self.position[1] == \
                             truck_position[1]:
@@ -120,7 +136,7 @@ class Car:
                     if [self.position[0]] < [truck_position[0] + 200 + Proxi] and self.position[1] == truck_position[1]:
                         self.speed = 0
                         if change_lane(0, self.canvas, self.truck):
-                            print('siiiii')
+                            #print('siiiii')
                             if not self.frenado:
                                 self.frenado = True
                                 if truck_position[1] == 260:
@@ -133,7 +149,7 @@ class Car:
                                 self.canvas.destroy()
                                 self.main.destroy()
                         else:
-                            print('noup')
+                            #print('noup')
                             stopped = True
                             message = tk.messagebox.showinfo(title='Frenado',
                                                              message='No se puede realizar el cambio de carril')
@@ -163,7 +179,7 @@ class Car:
 
 '''Simulador'''
 
-
+#Funcion donde se realiza toda la simulacion
 def simu():
     global CB_EW, Proxi, Freno, cars, stopped
 
@@ -171,16 +187,17 @@ def simu():
     print("El valor de Freno simu es:", Freno)
     print("El valor de Proxi simu es:", Proxi)
 
-    # Funcion para borrar de la existencia a los carritos, deme un chance a mañana y la hago jajaja
-
+    #Funcion donde se crea la ventana y el canvas de la simulacion
     def main():
+
         global cars, stopped
+
         root.withdraw()
 
         root_main = Toplevel()
         root_main.geometry('1200x400')
         root_main.resizable(False, False)
-
+        root_main.title('Simulador')
         highway_canvas = Canvas(root_main, width=1200, height=400, bg='gray')
         highway_canvas.pack(expand=1, fill=BOTH)
         highway_canvas.place(x=0, y=0)
@@ -188,22 +205,15 @@ def simu():
         truck = cargar_img("blue_truck.gif")
         highway_canvas.create_image(10, 260, image=truck, anchor=NW, state=NORMAL, tag="super_truck")
 
-        # truck_rect = highway_canvas.create_rectangle(10, 260, 210, 360, width=2, fill='blue',
-        # tag='destroyer_truck')
         truckPosicion = highway_canvas.coords('super_truck')
 
-        '''Como crear una imagen jiji, tqm
-        littlecar = cargar_img("Car.gif")
-        highway_canvas.create_image(50, 50, image=littlecar, anchor=NW, state=NORMAL, tag="carrito")
-        highway_canvas.coords("carrito")
-        print(highway_canvas.coords("carrito"))
-        '''
-
+        #Funcion para el boton Back
         def back():
             highway_canvas.destroy()
             root_main.destroy()
             root.deiconify()
 
+        #Funcion para cambiar la ubicacion del truck a disposicion del usuario
         def move_car(s):
             if s == "UP":
                 highway_canvas.coords('super_truck', 10, 50)
@@ -212,19 +222,18 @@ def simu():
 
         button_up = tk.Button(highway_canvas, text='Up', font=("fixedsys", "10"),
                               bg="#82B3FF", command=lambda: move_car("UP"))
-        button_up.place(x=100, y=0)
+        #button_up.place(x=100, y=0)
         button_down = tk.Button(highway_canvas, text='Down', font=("fixedsys", "10"),
                                 bg="#82B3FF",
                                 command=lambda: move_car("DOWN"))
-        button_down.place(x=200, y=0)
+        #button_down.place(x=200, y=0)
 
-        # button = tk.Button(highway_canvas, text='Press', font=("fixedsys", "10"),
-        #                    bg="#82B3FF", command=create_car)
-        # button.place(x=0, y=0)
 
         Btn_back = Button(highway_canvas, text='BACK', command=back, fg='black', bg='white')
-        Btn_back.place(x=250, y=1)
+        Btn_back.place(x=2, y=1)
 
+        #Funcion para la creacion de los automoviles
+        #E: el canvas donde se ejecuta la simulacion y el id del automovil
         def create_car(canvas, id):
             global cars, stopped
             if not stopped:
@@ -247,17 +256,15 @@ def simu():
 
 '''Ventana de configuracion'''
 
-
+#Funcion donde se almacena la ventana de configuracion del CB-EW
 def config():
     global CB_EW, Freno, Proxi
 
-
-
-
-
+    #Funcion para cambiar los valores globales de CB-EW, Freno y Proxi
     def cambiar():
-        global CB_EW, Freno, Proxi
+        global CB_EW, Freno, Proxi, stopped
 
+        stopped = False
         distance = int(entry_distance.get())
         Proxi = distance
 
@@ -265,8 +272,8 @@ def config():
         print("El valor de Freno cambio es:", Freno)
         print("El valor de Proxi cambio es:", Proxi)
 
+        #Funcion para cambiar los valores del txt
         def change_txt():
-            print('holi', CB_EW)
             w = open('backup.txt', 'w')
             w.writelines(str(CB_EW) + '\n' + str(Freno) + '\n' + str(Proxi))
             w.close()  # Cierras el archivo.
@@ -274,18 +281,21 @@ def config():
 
         simu()
 
+    #Funcion para cambiar el valor de la variable CB-EW
     def change_CB_EW(value):
         global CB_EW
         CB_EW = value
 
+    #Funcion para cambiar el valor de la variable Freno
     def change_Freno(value):
         global Freno
         Freno = value
 
+
     root_config = tk.Tk()
     root_config.geometry('800x400')
     root_config.resizable(False, False)
-
+    root_config.title('Configuracion del CB-EW')
     config_canvas = tk.Canvas(root_config, width=800, height=400, bg='gray')
     config_canvas.place(x=0, y=0)
 
@@ -323,17 +333,6 @@ def config():
                                    command=lambda: change_Freno(False))
     Freno_button_false.place(x=277, y=270)
 
-    # CBRadio1=tk.Radiobutton(root_config, text="Activado", variable=CB_EWr, value=True)
-    # CBRadio1.place(x=277, y=150)
-
-    # CBRadio2=tk.Radiobutton(root_config, text="Desactivado", variable=CB_EWr, value=False)
-    # CBRadio2.place(x=277, y=180)
-
-    # FrenoRadio1=tk.Radiobutton(root_config, text="Frenado de Emergencia", variable=Frenor, value=True)
-    # FrenoRadio1.place(x=277, y=240)
-
-    # FrenoRadio2=tk.Radiobutton(root_config, text="Cambio de Carril", variable=Frenor, value=False)
-    # FrenoRadio2.place(x=277, y=270)
 
     SimuButton = tk.Button(config_canvas, text="Iniciar", font=("fixedsys", "15"), bg='#AED6F1',
                            command=cambiar)
@@ -348,16 +347,15 @@ def config():
 
 '''Splash'''
 
-
+#Funcion donde se ejecuta el splash animado
 def anim():
-    # root.withdraw()
+
     global animation_time
 
     print(animation_time)
 
     animation_time = int(entry_time.get())
     print(animation_time)
-    # animation_time = 10
     balls = []
     animation_active = True
 
@@ -365,11 +363,15 @@ def anim():
     root_anim = tk.Tk()
     root_anim.geometry('800x400')
     root_anim.resizable(False, False)
+    root_anim.title('Splash')
 
     anim_canvas = tk.Canvas(root_anim, width=800, height=400, bg='#E8F8F5')
     anim_canvas.place(x=0, y=0)
 
+    #Clase donde se generan las bolas
     class Ball:
+
+        #Creacion de las bolas
         def __init__(self, canvas):
             self.canvas = canvas
             self.x = random.randint(0, 400)
@@ -383,9 +385,11 @@ def anim():
             ball_thread.daemon = True
             ball_thread.start()
 
+
         def __del__(self):
             print("Deleted")
 
+        #Funcion que mueve ls bolas
         def rebote(self):
             self.canvas.move(self.oval, self.speed, self.speed2)
             self.canvas.after(25, self.rebote)
@@ -396,6 +400,7 @@ def anim():
             if self.posicion[1] > 400:
                 self.speed2 = -self.speed2
 
+    #Funcion para borrar las bolas de la lista
     def delete_balls(i):
         if i < len(balls):
             del balls[i]
@@ -403,6 +408,7 @@ def anim():
         else:
             return
 
+    #Funcion para crear las bolas en el rango de tiempo brindado
     def create_ball():
         global start_time
         print(animation_active)
@@ -415,6 +421,7 @@ def anim():
             delete_balls(0)
             return
 
+    #Funcion para el inico del hilo de la creacion de bolas
     def start_animation_thread():
         global animation_active, start_time
         start_time = time.time()
@@ -444,9 +451,11 @@ def anim():
 
 '''Ventana de Inicio'''
 
+#Creacion de la ventana de inicio del programa
+
 root.geometry('800x400')
 root.resizable(False, False)
-
+root.title('Inicio')
 root_canvas = tk.Canvas(root, width=800, height=400, bg='#5499C7')
 root_canvas.place(x=0, y=0)
 
